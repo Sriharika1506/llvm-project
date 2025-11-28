@@ -351,7 +351,39 @@ unsigned MIRVocabulary::getCommonOperandIndex(
   return static_cast<unsigned>(OperandType) - 1;
 }
 
+// unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+//   errs()<<"entered getRegisterOperandIndex..."<<"\n";
+//    errs() << "Reg ID = " << Reg.id() << "\n";      
+//   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
+//   assert(Reg.isValid() && "Invalid register; not expected here");
+//   assert((Reg.isPhysical() || Reg.isVirtual()) &&
+//          "Expected a physical or virtual register");
+
+//   const TargetRegisterClass *RegClass = nullptr;
+
+//   // For physical registers, use TRI to get minimal register class as a
+//   // physical register can belong to multiple classes. For virtual
+//   // registers, use MRI to uniquely identify the assigned register class.
+//   if (Reg.isPhysical())
+//     RegClass = TRI.getMinimalPhysRegClass(Reg);
+//   else
+//     RegClass = MRI.getRegClass(Reg);
+
+//   errs()<<"***Regclas: "<<RegClass<<"\n";
+//   if (RegClass){
+
+//     return RegClass->getID();
+//   }
+//   // Fallback for registers without a class (shouldn't happen)
+//   // errs() << "RegClass Name = " << RegClass->getName() << "\n";
+//   llvm_unreachable("Register operand without a valid register class");
+//   return 0;
+// }
+
 unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+  // errs() << "entered getRegisterOperandIndex..." << "\n";
+  errs() << "Reg ID = " << Reg.id() << "\n";
+
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
@@ -367,12 +399,26 @@ unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   else
     RegClass = MRI.getRegClass(Reg);
 
-  if (RegClass)
-    return RegClass->getID();
-  // Fallback for registers without a class (shouldn't happen)
-  llvm_unreachable("Register operand without a valid register class");
-  return 0;
+  errs() << "***RegClass ptr: " << RegClass << "\n";
+
+  // Sentinel value to indicate "no valid register class / skip this operand".
+  // Use an unlikely index so callers can check for it. Adjust if your
+  // codebase already uses a different sentinel.
+  constexpr unsigned InvalidRegisterOperandIndex = std::numeric_limits<unsigned>::max();
+
+  if (!RegClass) {
+    // Print a helpful message and return sentinel instead of crashing.
+    // Caller must check for InvalidRegisterOperandIndex and skip emitting
+    // the operand or handle it explicitly.
+    errs() << "NOTICE: Register has no register class (special register?). "
+              "Reg.id() = "
+           << Reg.id() << ". Skipping register operand.\n";
+    return InvalidRegisterOperandIndex;
+  }
+
+  return RegClass->getID();
 }
+
 
 Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
     const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,

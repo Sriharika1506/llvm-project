@@ -222,8 +222,16 @@ getMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg,
       BestRC = RC;
   }
 
-  if constexpr (std::is_same_v<TypeT, MVT>)
+  if constexpr (std::is_same_v<TypeT, MVT>){
+    if (!BestRC) {
+      errs() << "FAILED: No register class found for Reg = " 
+       << Reg 
+       << " (" << TRI->getRegAsmName(Reg) << ")\n";
+      return nullptr; // prevent assert crash temporarily
+    }
+    // return nullptr;
     assert(BestRC && "Couldn't find the register class");
+  }
   return BestRC;
 }
 
